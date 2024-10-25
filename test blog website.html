@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Startup Chronicles</title>
+    <style>
+        :root {
+            --bg-dark: #0a0a0a;
+            --bg-medium: #1a1a1a;
+            --text-primary: #ffffff;
+            --text-secondary: #888888;
+            --accent: #404040;
+            --hover: #505050;
+        }
+
+        * {
+            box-sizing: border-box;
+            transition: all 0.2s ease;
+        }
+
+        body {
+            font-family: "SF Mono", "Cascadia Code", Menlo, monospace;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+        }
+
+        header {
+            background: var(--bg-medium);
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--accent);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        nav {
+            max-width: 800px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        nav a {
+            color: var(--text-primary);
+            text-decoration: none;
+            margin-right: 2rem;
+            font-size: 0.9rem;
+        }
+
+        nav a:hover {
+            color: var(--text-secondary);
+        }
+
+        main {
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+
+        .timeline {
+            position: relative;
+            padding-left: 2rem;
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 1px;
+            background: var(--accent);
+        }
+
+        .post {
+            background: var(--bg-medium);
+            padding: 2rem;
+            margin-bottom: 2rem;
+            border: 1px solid var(--accent);
+            position: relative;
+        }
+
+        .post::before {
+            content: '';
+            position: absolute;
+            left: -2.5rem;
+            top: 2rem;
+            width: 0.5rem;
+            height: 0.5rem;
+            border-radius: 50%;
+            background: var(--text-primary);
+        }
+
+        .post-date {
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            margin-bottom: 1rem;
+            font-family: monospace;
+        }
+
+        .post-title {
+            margin: 0 0 1rem 0;
+            color: var(--text-primary);
+            font-size: 1.2rem;
+        }
+
+        .tag {
+            display: inline-block;
+            background: var(--accent);
+            padding: 0.2rem 0.8rem;
+            border-radius: 2px;
+            font-size: 0.8rem;
+            color: var(--text-primary);
+            margin-right: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .post-content {
+            margin-top: 1rem;
+            color: var(--text-secondary);
+        }
+
+        .button {
+            background: var(--accent);
+            color: var(--text-primary);
+            border: none;
+            padding: 0.8rem 1.5rem;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 0.9rem;
+        }
+
+        .button:hover {
+            background: var(--hover);
+        }
+
+        .new-post-form {
+            background: var(--bg-medium);
+            padding: 2rem;
+            margin-bottom: 2rem;
+            border: 1px solid var(--accent);
+            display: none;
+        }
+
+        .new-post-form.active {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--text-secondary);
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.8rem;
+            background: var(--bg-dark);
+            border: 1px solid var(--accent);
+            color: var(--text-primary);
+            font-family: inherit;
+        }
+
+        .form-group textarea {
+            height: 150px;
+            resize: vertical;
+        }
+
+        .tag-input {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-top: 0.5rem;
+        }
+
+        @media (max-width: 600px) {
+            .timeline {
+                padding-left: 1.5rem;
+            }
+            
+            .post::before {
+                left: -1.75rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <nav>
+            <div>
+                <a href="/">Home</a>
+                <a href="/archive">Archive</a>
+            </div>
+            <button class="button" onclick="toggleNewPostForm()">New Entry</button>
+        </nav>
+    </header>
+
+    <main>
+        <div class="new-post-form" id="newPostForm">
+            <h2 class="post-title">New Entry</h2>
+            <form onsubmit="createNewPost(event)">
+                <div class="form-group">
+                    <label for="postTitle">Title</label>
+                    <input type="text" id="postTitle" required>
+                </div>
+                <div class="form-group">
+                    <label for="postContent">Content</label>
+                    <textarea id="postContent" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="postTags">Tags (comma-separated)</label>
+                    <input type="text" id="postTags">
+                </div>
+                <button type="submit" class="button">Publish</button>
+            </form>
+        </div>
+
+        <div class="timeline" id="timeline">
+            <!-- Posts will be inserted here -->
+        </div>
+    </main>
+
+    <script>
+        // Load posts from localStorage on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            const posts = JSON.parse(localStorage.getItem('blogPosts') || '[]');
+            posts.sort((a, b) => new Date(b.date) - new Date(a.date));
+            posts.forEach(post => {
+                addPostToTimeline(post);
+            });
+        });
+
+        function toggleNewPostForm() {
+            const form = document.getElementById('newPostForm');
+            form.classList.toggle('active');
+        }
+
+        function createNewPost(event) {
+            event.preventDefault();
+
+            const title = document.getElementById('postTitle').value;
+            const content = document.getElementById('postContent').value;
+            const tags = document.getElementById('postTags').value
+                .split(',')
+                .map(tag => tag.trim())
+                .filter(tag => tag);
+
+            const post = {
+                id: Date.now(),
+                title,
+                content,
+                tags,
+                date: new Date().toISOString()
+            };
+
+            // Save to localStorage
+            const posts = JSON.parse(localStorage.getItem('blogPosts') || '[]');
+            posts.unshift(post);
+            localStorage.setItem('blogPosts', JSON.stringify(posts));
+
+            // Add to timeline
+            addPostToTimeline(post);
+
+            // Reset form
+            event.target.reset();
+            toggleNewPostForm();
+        }
+
+        function addPostToTimeline(post) {
+            const timeline = document.getElementById('timeline');
+            const postElement = document.createElement('article');
+            postElement.className = 'post';
+            
+            const date = new Date(post.date);
+            const formattedDate = date.toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+
+            postElement.innerHTML = `
+                <time class="post-date">${formattedDate}</time>
+                <h2 class="post-title">${post.title}</h2>
+                <div class="tags">
+                    ${post.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
+                </div>
+                <div class="post-content">
+                    ${post.content.replace(/\n/g, '<br>')}
+                </div>
+            `;
+
+            timeline.insertBefore(postElement, timeline.firstChild);
+        }
+    </script>
+</body>
+</html>
